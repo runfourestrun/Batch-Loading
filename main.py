@@ -62,10 +62,11 @@ def generate_cypher(parameters):
     '''
 
 
-
+    #yuck...
     _parameters_key= 'params'
     _parameters = defaultdict(list)
     _parameters[_parameters_key] = parameters
+    #double yuck...
     _parameters = str(dict(_parameters))
 
     unwind_string = ':params '  + _parameters + '\n ' + 'UNWIND $params as param'
