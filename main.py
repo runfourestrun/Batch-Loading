@@ -10,7 +10,7 @@ from connection import connection
 
 def read_json_file(json_file):
     '''
-    Reads Json File and yields a generator for a json object
+    Reads Json File and yields a generator
     :param json_file:
     :return:
     '''
@@ -24,7 +24,7 @@ def read_json_file(json_file):
 
 def generate_parameter_data(json_object,properties:list):
     '''
-    creates a dictionary from a json object based on if the key is in the list
+    creates a dictionary from a json object. based on if the key is in the list
     :param json_object: a single json object
     :param properties: a list of strings that coorespond to keys in the dict/json
     :return:
@@ -35,19 +35,32 @@ def generate_parameter_data(json_object,properties:list):
 
 
 
-def chunk_parameters(parameters:list):
-    chunks = [parameters[x:x+100] for x in range(0, len(parameters),100)]
-    print(chunks)
+def chunk_parameters(parameters:list,chunk_size:int):
+    '''
+    Chunks a list into smaller sublists. The idea here is to take create batches or chunks of parameters.
+    :param parameters: input parameters
+    :param chunk_size: size of sublists
+    :return:
+    '''
+    chunks = [parameters[x:x+chunk_size] for x in range(0, len(parameters),chunk_size)]
+    return chunks
+
 
 
 
 
 def generate_cypher(parameters):
     '''
-    default_dict_parameters = defaultdict(list)
-    default_dict_parameters['params'] = parameters
-    dict_parameters = str(dict(default_dict_parameters))
+
+    :param parameters: list of dicts representing parameters
+    :return: String that represents a cypher statement
+
+
+    {'params': [{'author': 'Dean R Koontz'}, {'author': 'Stephenie Meyer'}
+    UNWIND $params as param
+    CREATE (u:User {author:param.author})
     '''
+
 
 
     _parameters_key= 'params'
@@ -82,24 +95,25 @@ def generate_cypher(parameters):
 if __name__ == '__main__':
     json_file =  '/Users/alexanderfournier/PycharmProjects/json_neo4j/input/nyt2.json'
     author_properties = ['author']
+
     author_parameter_list = []
-
-
     for json_object in read_json_file(json_file):
         for _dict in generate_parameter_data(json_object,author_properties):
             author_parameter_list.append(_dict)
 
 
 
+    chunks = chunk_parameters(author_parameter_list,chunk_size=1000)
+    cypher_statements = [generate_cypher(chunk) for chunk in chunks]
 
 
-    cypher_statement = generate_cypher(author_parameter_list)
 
 
 
     connection  = connection.Neo4j(url='bolt://localhost:7687',database='test',password='Reddit123!',username='neo4j')
 
-    #connection.write(cypher_statement)
+    for cypher_statement in cypher_statements:
+        connection.write(cypher_statement)
 
 
 
