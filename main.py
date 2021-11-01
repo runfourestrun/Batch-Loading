@@ -68,7 +68,7 @@ def generate_cypher(parameters):
     _parameters[_parameters_key] = parameters
     _parameters = str(dict(_parameters))
 
-    unwind_string =  _parameters + '\n ' + 'UNWIND $params as param'
+    unwind_string = ':params '  + _parameters + '\n ' + 'UNWIND $params as param'
 
 
 
@@ -104,7 +104,15 @@ if __name__ == '__main__':
 
 
     chunks = chunk_parameters(author_parameter_list,chunk_size=1000)
+
+
+
     cypher_statements = [generate_cypher(chunk) for chunk in chunks]
+
+
+
+
+
 
 
 
@@ -114,6 +122,8 @@ if __name__ == '__main__':
 
     for cypher_statement in cypher_statements:
         connection.write(cypher_statement)
+
+
 
 
 
