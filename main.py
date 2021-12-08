@@ -1,5 +1,4 @@
 import json
-from connection import connection
 from neo4j import GraphDatabase
 
 
@@ -21,7 +20,7 @@ def read_json_file(json_file_path):
 
 
 
-def generate_parameter_data(json_object,properties:list):
+def individual_parameter_generator(json_object,properties:list):
     '''
     creates a dictionary from a json object. based on if the key is in the list
     :param json_object: a single json object
@@ -34,9 +33,12 @@ def generate_parameter_data(json_object,properties:list):
 
 
 '''
-todo: I feel like it's kind of confusing to call the functions inside this function... should I create a decorator/wrapper? 
+todo: I feel like it's kind of confusing to call the functions: individual_parameter_generator, read_json_file
+inside this function... 
+should I create a decorator/wrapper? 
+maybe refactor this to be a Class and use static/class methods. 
 '''
-def generate_properties(acceptable_properties:list,json_file_path:str):
+def generate_parameters(acceptable_properties:list,json_file_path:str):
     '''
     acceptable properties
     :param acceptable_properties: list of properties that we want to extract from the json
@@ -44,7 +46,7 @@ def generate_properties(acceptable_properties:list,json_file_path:str):
     '''
     parameter_list = []
     for json_object in read_json_file(json_file_path):
-        for _dict in generate_parameter_data(json_object, acceptable_properties):
+        for _dict in individual_parameter_generator(json_object, acceptable_properties):
             parameter_list.append(_dict)
     return parameter_list
 
@@ -61,52 +63,13 @@ def chunk_parameters(parameters:list,chunk_size:int):
 
 
 
-
-def generate_cypher(batches_of_paramters):
+def create_authors(tx,batch):
     '''
-    DON'T USE THIS FUNCTION.
-    I'm only keeping it for future reference but string interpolation isn't the move here.
-
-    :param parameters: list of dicts representing parameters
-    :return: List of Dictionaries. Dictionary Key is the batch index. Value is the Cypher string with Parameters
-
-
-    :params {'params': [{'author': 'Dean R Koontz'}, {'author': 'Stephenie Meyer'}
-    UNWIND $params as param
-    WITH param
-    CREATE (u:User {author:param.author})
-    '''
-
-
-    cypher_statements = []
-    i = 0
-    for batch in batches_of_parameters:
-        while i < len(batches_of_paramters):
-            i = i+1
-            cypher = f'UNWIND ${str(batch)} as param CREATE (u:User {{author:param.author}}'
-            cypher_statement = {i:cypher}
-            cypher_statements.append(cypher_statement)
-    return cypher_statements
-
-
-
-def run_string_interpolation(cypher_statements:list,connection):
-    '''
-    DON'T USE THIS FUNCTION.
-    I'm only keeping it for future reference but string interpolation isn't the move here.
-    This uses the Connection module as well.
-
-    :param cypher_statements: list of Cypher statements
-    :param connection: Connection object
+    :param tx:
+    :param batch:
     :return:
     '''
-    for cypher_dict in cypher_statements:
-        for k,cypher_statement in cypher_dict.items():
-            connection.execute(cypher_statement)
-
-
-def create_authors(tx,batch):
-    tx.run(f"UNWIND $batch as param CREATE (u:User {{author:param:author}})")
+    tx.run(f"UNWIND $batch as param CREATE (u:User {{author:param:author}})",kwparameters=batch)
 
 
 
@@ -120,17 +83,17 @@ if __name__ == '__main__':
     json_file_path =  '/Users/alexanderfournier/PycharmProjects/json_neo4j/input/nyt2.json'
     acceptable_properties = ['author']
     uri = 'bolt://localhost:7687'
-    driver = GraphDatabase.driver(uri, auth=('neo4j','Reddit123!'))
+    driver = GraphDatabase.driver(uri, auth=('neo4j','foo!'))
 
 
 
-    parameter_list = generate_properties(acceptable_properties,json_file_path)
+    parameter_list = generate_parameters(acceptable_properties,json_file_path)
     batches_of_parameters = chunk_parameters(parameter_list,chunk_size=50)
 
 
     with driver.session() as session:
         for batch in batches_of_parameters:
-            session.write_transaction(create_authors,batch)
+            session.write_transaction(create_authors, batch)
 
 
 
